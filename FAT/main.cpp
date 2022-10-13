@@ -4,49 +4,42 @@ int main() {
 	BYTE BootSector[512];
 	BYTE FAT1[512];
 	BYTE RDECT[512];
-	FAT32 Miku;
+	BYTE DATA[512];
+	
 	string namePath;
 	cout << "Nhap ten dau dia: ";
 	cin >> namePath;
 	string tom = "\\\\.\\" + namePath + ":";
 	wstring tmp = strToWstr(tom);
 	LPCWSTR disk = tmp.c_str();
-	ReadSector(disk, (long)0, BootSector);
+	FAT32 Miku(disk);
+	ReadSector(Miku.driver, (long)0, BootSector);
 	Miku.print(BootSector, 512);
 
 	
-	ReadSector(disk, 3555328, FAT1);
+	ReadSector(Miku.driver, 3555328, FAT1);
 	std::cout << Miku.read(FAT1, 512);
-	ReadSector(disk, 18554880 + 14999552, RDECT);
+	ReadSector(Miku.driver, 18554880 + 14999552, RDECT);
 	std::cout << Miku.read(RDECT, 512);
 	std::cout << std::endl;
 	std::vector<string> entry = convertToEntry(convertToVector(RDECT, 512), 0);
 	std::cout << std::endl;
 	std::vector<
 		std::pair<
-		std::vector<string>, std::vector<std::vector<std::string>>>> entries = splitEntries(convertToVector(RDECT, 512));
+		std::vector<string>, std::vector<std::vector<std::string>>>> entries = Miku.splitEntries(convertToVector(RDECT, 512));
 	for (int j(0); j < entries.size(); j++) {
 		for (int i(0); i < entries[j].second.size(); i++) {
-			printEntry(entries[j].second[i]);
+			Miku.printEntry(entries[j].second[i]);
 			std::cout << std::endl;
 		}
-		printEntry(entries[j].first);
+		Miku.printEntry(entries[j].first);
 		std::cout << std::endl;
-		printEntryInfomation(entries[j]);
+		Miku.readNameEntry(entries[j]);
 	}
+	
+	
+	
 
-	//for (int i(0); i < entries[0].second.size(); i++) {
-	//	printEntry(entries[0].second[i]);
-	//	std::cout << std::endl;
-	//}
-	//printEntry(entries[0].first);
-	//std::cout << std::endl;
-	//printEntryInfomation(entries[0]);
-
-
-	//ReadSector(disk, 948151838208, BootSector);
-	//////Miku.read(FAT1,512);
-	//Miku.print(BootSector, 512);
 
 	return 0;
 }

@@ -28,9 +28,6 @@ void ReadSector(LPCWSTR drive, int readPoint, BYTE* sector)
 		std::cout << "Read file error: " << GetLastError() << std::endl;
 		return;
 	}
-	else {
-		std::cout << "Success" << std::endl;
-	}
 }
 
 wstring strToWstr(std::string s)
@@ -228,10 +225,106 @@ void FAT32::print(uint8_t* sector, int len) {
 	cout << "Ki hieu vat ly dia: " << BS_DrvNum << endl;
 	cout << "Vi tri cua bang FAT1: " << BPB_RsvdSecCnt * BPB_BytesPerSec << " bytes" << endl;
 	cout << "Vi tri cua bang FAT2: " << (BPB_RsvdSecCnt + BPB_FATSz32) * BPB_BytesPerSec << " bytes" << endl;
+
+	Data_Position = BPB_RsvdSecCnt + BPB_NumFATs * BPB_FATSz32;
+	std::cout << Data_Position << std::endl;
 	
 	std::string FatName = LittleEndian(convertToVector(sector, len), "52", 8);
 	std::cout << hexToASCII(FatName) << std::endl;
 }
+
+std::vector<int> FAT32::getAllClustersOfFile(int firstCluster) {
+	std::vector<int> fileClusters;
+
+	BYTE sector[512];
+
+	// Chuyển đến vị trí bản FAT1 => Lấy các thông tin dữ liệu từ bản Cluster
+	int readPoint = BPB_RsvdSecCnt * BPB_BytesPerSec;
+
+	ReadSector(driver, readPoint, sector);
+	//Chuyển đến sector tiếp theo (flag)
+	readPoint += 512;
+
+	int iCluster = firstCluster;
+
+	do {
+		if (iCluster == 0) {
+			break;
+		}
+		fileClusters.push_back(iCluster);
+		iCluster = hexadecimalToDecimal(LittleEndian(convertToVector(sector, 512), decimalToHexdecimal((4 * iCluster) % 512), 4));
+		
+		if (iCluster > readPoint / 4) {
+			ReadSector(driver, readPoint, sector);
+			readPoint += 512;
+		}
+	} while (iCluster != 268435455); // 0FFFFFFF
+
+	return fileClusters;
+}
+
+
+
+// Tìm sector tương ứng với Cluster
+vector<int> FAT32::getAllSectorsOfFile(std::vector<int> fileClusters) {
+	vector<int> fileSectors;
+
+	for (unsigned int i = 0; i < fileClusters.size(); i++) {
+		int firstSector = findTheLogicSector(fileClusters[i]);
+
+		for (int i = 0; i < BPB_SecPerClus; i++)
+			fileSectors.push_back(firstSector + i);
+	}
+
+	return fileSectors;
+}
+
+//Doc noi dung tap tin
+void FAT32::ReadData(std::string fileExtension, int firstCluster) {
+	for (auto& c : fileExtension) c = toupper(c);
+	std::cout << "Content" << std::endl;
+	if (strcmp(fileExtension.c_str(), "TXT") == 0) {
+		if (firstCluster != 0) {
+			vector<int> fileClusters = getAllClustersOfFile(firstCluster);
+			vector<int> fileSectors = getAllSectorsOfFile(fileClusters);
+
+			for (unsigned int i = 0; i < fileSectors.size(); i++) {
+				BYTE sectorFile[512];
+
+				int readPointFile = fileSectors[i] * BPB_BytesPerSec;
+
+				ReadSector(driver,readPointFile, sectorFile);
+
+				for (int j = 0; j < 512 && sectorFile[j] != '\0'; j += 1)
+					std::cout << sectorFile[j];
+			}
+		}
+		std::cout << "\n";
+	}
+	else
+		std::cout << "Can phan mem khac de doc file khac .txt\n";
+	std::cout << "\n";
+}
+
+//Lay thong tin tap tin
+void FAT32::GetFileInfo(uint8_t* sector, int firstCluster) {
+	vector<int> fileClusters = getAllClustersOfFile(firstCluster);
+	vector<int> fileSectors = getAllSectorsOfFile(fileClusters);
+
+	std::cout << "Cluster bat dau: %\n" << firstCluster;
+
+	std::cout << "Chiem cac cluster: ";
+
+	for (unsigned int i = 0; i < fileClusters.size(); i++)
+		std::cout << fileClusters[i];
+	std::cout << "\n";
+
+	std::cout << (L"+Chiem cac sector: ");
+	for (unsigned int i = 0; i < fileSectors.size(); i++)
+		std::cout << fileSectors[i];
+	std::cout << "\n";
+}
+
 
 // sector : 512 bytes
 // n is stt cua entry. Tối đa 16 entry (0 -> 15)
@@ -268,7 +361,7 @@ bool isMainEntry(std::vector<std::string> entry) {
 //									- second:	Là 1 vector dùng để chứa các entry phụ (vector<string>) 
 std::vector<
 	std::pair<
-		std::vector<string>, std::vector<std::vector<std::string>>>> splitEntries(std::vector<string> sector) {
+		std::vector<string>, std::vector<std::vector<std::string>>>>FAT32::splitEntries(std::vector<string> sector) {
 
 
 	std::vector<
@@ -304,11 +397,12 @@ std::vector<
 //		- Đọc từ byte 1 10 bytes
 //		- Đọc từ byte E 12 bytes
 //		- Đọc từ byte 1C 4 bytes
-std::string readNameEntry(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> sub_and_main_entry) {
+void FAT32::readNameEntry(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> sub_and_main_entry) {
 	std::string name = "";
+	std::string extname = "";
 	if (sub_and_main_entry.second.size() == 0) { // trường hợp nếu Entry chính không có Entry phụ
 		std::string filename = hexToASCII(noLittleEndian(sub_and_main_entry.first, "0", 8));
-		std::string extname = hexToASCII(noLittleEndian(sub_and_main_entry.first, "8", 3));
+		extname = hexToASCII(noLittleEndian(sub_and_main_entry.first, "8", 3));
 		name = filename + "." + extname;
 	}
 	else {
@@ -317,24 +411,28 @@ std::string readNameEntry(std::pair<std::vector<std::string>, std::vector<std::v
 								+ hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "E", 12))
 								+ hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "1C", 4));
 		}
+
+		int len = name.length();
+		extname = name[len - 1] + name[len - 2] + name[len - 3];
 	}
-	return name;
-}
 
-void printEntryInfomation(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> sub_and_main_entry) {
-	// Đọc tên
-	std::cout << readNameEntry(sub_and_main_entry) << std::endl;
-
-	int mainEntry_StartCluster	= hexadecimalToDecimal(LittleEndian(sub_and_main_entry.first, "1A", 2));
+	std::cout << name;
+	int mainEntry_StartCluster = hexadecimalToDecimal(LittleEndian(sub_and_main_entry.first, "1A", 2));
 	std::cout << "Cluster bat dau: " << mainEntry_StartCluster << std::endl;
 
 	int mainEntry_SizeFile = hexadecimalToDecimal(LittleEndian(sub_and_main_entry.first, "1C", 4));
 	std::cout << "Kich thuoc cua File: " << mainEntry_SizeFile << " bytes" << std::endl;
+	ReadData(extname, mainEntry_StartCluster);
 }
 
+void FAT32::printEntryInfomation(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> sub_and_main_entry) {
+	// Đọc tên
+
+
+}
 
 // In kiểm tra thôi
-void printEntry(std::vector<std::string> entry) {
+void FAT32::printEntry(std::vector<std::string> entry) {
 	for (int i(0); i < 32; i++) {
 		if (i != 0 && i % 16 == 0) {
 			std::cout << std::endl;
@@ -342,4 +440,6 @@ void printEntry(std::vector<std::string> entry) {
 		std::cout << entry[i] << " ";
 	}
 }
+
+
 

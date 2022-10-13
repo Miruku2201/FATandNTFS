@@ -12,22 +12,10 @@
 #include<bitset>
 using namespace std;
 
-class TextContent // Lớp để lưu thông tin nội dung file txt
-{
-private:
-	string filename;
-	vector<byte> datacore;
-	int datasize;
-public:
-	string Filename() { return filename; }
-	int size() { return datasize; }
-	vector<byte>data() { return datacore; }
-};
-
 class FAT32
 {
-private:
-	//LPCWSTR driver = NULL;  //lưu tên đường dẫn
+public:
+	LPCWSTR driver = NULL;  //lưu tên đường dẫn
 	string FATiden =""; //offset 52 - 8 bytes (định danh của FAT)
 	string volumeType=""; //offset 15 - 1 byte, Loại volume, nhận biết bằng chuỗi hexa
 	
@@ -40,12 +28,31 @@ private:
 	int BPB_FATSz32 = 0; // Số sector trong 1 bảng FAT (off set 24 - 4 bytes)
 	int BPB_RootClus = 0;//Rootcluster location in the fat32 image
 	int BS_DrvNum = 0; // Chỉ số cluster đầu tiên trong RDET (off set 2C - 4 bytes)
+	int Data_Position = 0;
 public:
+	FAT32(LPCWSTR disk) {
+		this->driver = disk;
+	}
 	std::string read(uint8_t* sector, int len); // hàm để đọc bootsector - viết hàm bên file function.cpp
 	void print(uint8_t* sector, int len); // hàm để in thông tin về bootsector - như trên
-	//void setDriver(LPCWSTR driver) {
-	//	this->driver = driver;
-	//}
+	int getRootClus() {
+		return BPB_RootClus;
+	}
+
+	// Tìm vị trí sector logic.
+	int findTheLogicSector(int cluster) {
+		return (cluster - 2) * BPB_SecPerClus + BPB_RsvdSecCnt + BPB_NumFATs * BPB_FATSz32;
+	}
+
+	std::vector<int> getAllClustersOfFile(int firstCluster);
+	std::vector<int> getAllSectorsOfFile(std::vector<int> fileClusters);
+	void ReadData(std::string fileExtension, int firstCluster);
+	void GetFileInfo(uint8_t* sector, int firstCluster);
+	std::vector<std::pair<std::vector<string>, std::vector<std::vector<std::string>>>> splitEntries(std::vector<string> sector);
+	void readNameEntry(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> sub_and_main_entry);
+	void printEntry(std::vector<string>entry);
+
+	void printEntryInfomation(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>>);
 };
 
 void ReadSector(LPCWSTR drive, int readPoint, BYTE* sector);
@@ -61,9 +68,7 @@ string LittleEndian(std::vector<string> temp, std::string offset_hex, int nBytes
 std::vector<string> convertToEntry(std::vector<std::string> sector, int n); // Convert 512 byte -> 16 entry
 bool isSubEntry(std::vector<std::string>entry);
 bool isMainEntry(std::vector<std::string>entry);
-std::vector<std::pair<std::vector<string>, std::vector<std::vector<std::string>>>> splitEntries(std::vector<string> sector);
-void printEntry(std::vector<string>entry);
-std::string readNameEntry(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> sub_and_main_entry);
-void printEntryInfomation(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>>);
+
+
 
 #endif //!FAT32
