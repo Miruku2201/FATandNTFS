@@ -147,7 +147,7 @@ std::string LittleEndian(std::vector<string> sector, std::string offset_hex, int
 	return str;
 }
 
-std::string noLittleEndian(std::vector<string> sector, std::string offset_hex, int nBytes)
+std::string BigEndian(std::vector<string> sector, std::string offset_hex, int nBytes)
 {
 	int offset_dec = hexadecimalToDecimal(offset_hex);
 	string str = "";
@@ -294,11 +294,16 @@ void FAT32::ReadData(std::string fileExtension, int firstCluster) {
 				BYTE sectorFile[512];
 
 				int readPointFile = fileSectors[i] * BPB_BytesPerSec;
-
+				
 				ReadSector(driver,readPointFile, sectorFile);
+				
 
-				for (int j = 0; j < 512 && sectorFile[j] != '\0'; j += 1)
+				for (int j = 0; j < 512; j += 1) {
 					std::cout << sectorFile[j];
+					if (sectorFile[j] == '\0') {
+						return;
+					}
+				}
 			}
 		}
 		std::cout << "\n";
@@ -363,7 +368,7 @@ bool isMainEntry(std::vector<std::string> entry) {
 //									- second:	Là 1 vector dùng để chứa các entry phụ (vector<string>) 
 std::vector<
 	std::pair<
-		std::vector<string>, std::vector<std::vector<std::string>>>>FAT32::splitEntries(std::vector<string> sector) {
+		std::vector<string>, std::vector<std::vector<std::string>>>>FAT32::splitEntries(std::vector<string> sector, int numberEntries) {
 
 
 	std::vector<
@@ -373,7 +378,7 @@ std::vector<
 	std::pair<
 		std::vector<string>, std::vector<std::vector<std::string>>> sub_and_main_entry; // Pair để chứa 1 entry chính và các entry phụ của nó
 
-	for (int i(0); i < 16; i++) {														// Vòng for chạy tới 16 vì chỉ có 16 entry trong 1 sector (16x32 = 512)
+	for (int i(0); i < numberEntries; i++) {														// Vòng for chạy tới 16 vì chỉ có 16 entry trong 1 sector (16x32 = 512)
 		std::vector<string> entry = convertToEntry(sector, i);						// Lấy giá trị của entry thứ i / 16 entry
 		if (isSubEntry(entry)) {														// Kiểm tra xem có phải là Entry phụ không
 			sub_and_main_entry.second.push_back(entry);								// Đúng thì lưu vào trong list của các entry phụ
@@ -404,16 +409,16 @@ void FAT32::readNameEntry(std::pair<std::vector<std::string>, std::vector<std::v
 	stringstream ext;
 	std::string extname = "";
 	if (sub_and_main_entry.second.size() == 0) { // trường hợp nếu Entry chính không có Entry phụ
-		std::string filename = hexToASCII(noLittleEndian(sub_and_main_entry.first, "0", 8));
-		extname = hexToASCII(noLittleEndian(sub_and_main_entry.first, "8", 3));
+		std::string filename = hexToASCII(BigEndian(sub_and_main_entry.first, "0", 8));
+		extname = hexToASCII(BigEndian(sub_and_main_entry.first, "8", 3));
 		name = filename + "." + extname;
 	}
 	else {
 		for (int i = sub_and_main_entry.second.size()-1; i > -1; --i) { // Trường hợp Entry chính có Entry phụ
 
-			name += hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "1", 10)) + 
-				hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "E", 12))+
-				hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "1C", 4));
+			name += hexToASCII(BigEndian(sub_and_main_entry.second[i], "1", 10)) + 
+				hexToASCII(BigEndian(sub_and_main_entry.second[i], "E", 12))+
+				hexToASCII(BigEndian(sub_and_main_entry.second[i], "1C", 4));
 
 
 			//std::string first = hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "1", 10));
@@ -447,11 +452,29 @@ void FAT32::readNameEntry(std::pair<std::vector<std::string>, std::vector<std::v
 	ReadData(extname, mainEntry_StartCluster);
 }
 
-void FAT32::printEntryInfomation(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> sub_and_main_entry) {
-	// Đọc tên
 
+
+void FAT32::GetDirectory(int cluster) {
+	BYTE sector[512];// Sector của Cluster
+	int readPoint = findTheLogicSector(cluster) * BPB_BytesPerSec;
+	ReadSector(driver, readPoint, sector);
+
+	std::vector<
+		std::pair<
+		std::vector<string>, std::vector<std::vector<std::string>>>> entries = splitEntries(convertToVector(sector, 512), 16);
+	for (int j(0); j < entries.size(); j++) {
+		for (int i(0); i < entries[j].second.size(); i++) {
+			printEntry(entries[j].second[i]);
+			std::cout << std::endl;
+		}
+		printEntry(entries[j].first);
+		std::cout << std::endl;
+		readNameEntry(entries[j]);
+		std::cout << std::endl;
+	}
 
 }
+
 
 // In kiểm tra thôi
 void FAT32::printEntry(std::vector<std::string> entry) {

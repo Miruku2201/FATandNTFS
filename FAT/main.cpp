@@ -28,7 +28,7 @@ int main() {
 	std::cout << std::endl;
 	std::vector<
 		std::pair<
-		std::vector<string>, std::vector<std::vector<std::string>>>> entries = Miku.splitEntries(convertToVector(RDECT, 512));
+		std::vector<string>, std::vector<std::vector<std::string>>>> entries = Miku.splitEntries(convertToVector(RDECT, 512), 16);
 	for (int j(0); j < entries.size(); j++) {
 		for (int i(0); i < entries[j].second.size(); i++) {
 			Miku.printEntry(entries[j].second[i]);
@@ -38,6 +38,15 @@ int main() {
 		std::cout << std::endl;
 		Miku.readNameEntry(entries[j]);
 	}
+
+
+	
+
+	Miku.GetDirectory(7);
+
+	ReadSector(Miku.driver, Miku.findTheLogicSector(8)*Miku.BPB_BytesPerSec +512, DATA);
+	Miku.print(DATA, 512);
+
 	return 0;
 }
 

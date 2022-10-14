@@ -48,11 +48,11 @@ public:
 	std::vector<int> getAllSectorsOfFile(std::vector<int> fileClusters);
 	void ReadData(std::string fileExtension, int firstCluster);
 	void GetFileInfo(uint8_t* sector, int firstCluster);
-	std::vector<std::pair<std::vector<string>, std::vector<std::vector<std::string>>>> splitEntries(std::vector<string> sector);
+	std::vector<std::pair<std::vector<string>, std::vector<std::vector<std::string>>>> splitEntries(std::vector<string> sector, int numberEntries);
 	void readNameEntry(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> sub_and_main_entry);
 	void printEntry(std::vector<string>entry);
-
 	void printEntryInfomation(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>>);
+	void GetDirectory(int cluster);
 };
 
 void ReadSector(LPCWSTR drive, int readPoint, BYTE* sector);
