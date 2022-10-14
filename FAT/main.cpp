@@ -16,10 +16,12 @@ int main() {
 	ReadSector(Miku.driver, (long)0, BootSector);
 	Miku.print(BootSector, 512);
 
+	int FAT1_pos = Miku.BPB_RsvdSecCnt * Miku.BPB_BytesPerSec;
+	int FAT2_pos = (Miku.BPB_RsvdSecCnt + Miku.BPB_FATSz32) * Miku.BPB_BytesPerSec;
 	
-	ReadSector(Miku.driver, 3555328, FAT1);
-	std::cout << Miku.read(FAT1, 512);
-	ReadSector(Miku.driver, 18554880 + 14999552, RDECT);
+	ReadSector(Miku.driver, FAT1_pos, FAT1);
+	std::cout << Miku.read(FAT1, 512) << std::endl;
+	ReadSector(Miku.driver, FAT2_pos+Miku.BPB_FATSz32*512, RDECT);
 	std::cout << Miku.read(RDECT, 512);
 	std::cout << std::endl;
 	std::vector<string> entry = convertToEntry(convertToVector(RDECT, 512), 0);
@@ -36,11 +38,6 @@ int main() {
 		std::cout << std::endl;
 		Miku.readNameEntry(entries[j]);
 	}
-	
-	
-	
-
-
 	return 0;
 }
 

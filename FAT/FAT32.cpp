@@ -252,8 +252,11 @@ std::vector<int> FAT32::getAllClustersOfFile(int firstCluster) {
 			break;
 		}
 		fileClusters.push_back(iCluster);
+
+		//FAT32 => bảng Fat1 có 4 byte để lữu trữ vị trí 1 cluster trong vùng DATA
 		iCluster = hexadecimalToDecimal(LittleEndian(convertToVector(sector, 512), decimalToHexdecimal((4 * iCluster) % 512), 4));
 		
+		// Nếu iCluster lớn hơn 512 bytes hiện tại -> chuyển sang Sector kế tiếp.
 		if (iCluster > readPoint / 4) {
 			ReadSector(driver, readPoint, sector);
 			readPoint += 512;
@@ -287,7 +290,6 @@ void FAT32::ReadData(std::string fileExtension, int firstCluster) {
 		if (firstCluster != 0) {
 			vector<int> fileClusters = getAllClustersOfFile(firstCluster);
 			vector<int> fileSectors = getAllSectorsOfFile(fileClusters);
-
 			for (unsigned int i = 0; i < fileSectors.size(); i++) {
 				BYTE sectorFile[512];
 
@@ -399,6 +401,7 @@ std::vector<
 //		- Đọc từ byte 1C 4 bytes
 void FAT32::readNameEntry(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> sub_and_main_entry) {
 	std::string name = "";
+	stringstream ext;
 	std::string extname = "";
 	if (sub_and_main_entry.second.size() == 0) { // trường hợp nếu Entry chính không có Entry phụ
 		std::string filename = hexToASCII(noLittleEndian(sub_and_main_entry.first, "0", 8));
@@ -407,15 +410,34 @@ void FAT32::readNameEntry(std::pair<std::vector<std::string>, std::vector<std::v
 	}
 	else {
 		for (int i = sub_and_main_entry.second.size()-1; i > -1; --i) { // Trường hợp Entry chính có Entry phụ
-			name += hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "1", 10))
-								+ hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "E", 12))
-								+ hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "1C", 4));
+
+			name += hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "1", 10)) + 
+				hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "E", 12))+
+				hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "1C", 4));
+
+
+			//std::string first = hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "1", 10));
+			//std::string second = hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "E", 12));
+			//std::string third =  hexToASCII(noLittleEndian(sub_and_main_entry.second[i], "1C", 4));
+
+			//if (noLittleEndian(sub_and_main_entry.second[i], "1C", 4) == ("FF FF FF FF"));
+			//{
+			//	third = "";
+			//}		[7]	0 '\0'	char
+
+			//name += first + second + third;
 		}
 
-		int len = name.length();
-		extname = name[len - 1] + name[len - 2] + name[len - 3];
+		for (int i(0); i < name.length(); i++) {
+			if (name[i] == '.') {
+				ext <<  name[i + 2] << name[i + 4] << name[i + 6];
+				break;
+			}
+		}
+		extname = ext.str();
 	}
 
+	
 	std::cout << name;
 	int mainEntry_StartCluster = hexadecimalToDecimal(LittleEndian(sub_and_main_entry.first, "1A", 2));
 	std::cout << "Cluster bat dau: " << mainEntry_StartCluster << std::endl;
