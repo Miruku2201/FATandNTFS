@@ -15,7 +15,7 @@ void ReadSector(LPCWSTR drive, int readPoint, BYTE* sector)
 		0,                      // File attributes
 		NULL);                  // Handle to template
 
-	if (device == INVALID_HANDLE_VALUE)
+	if (device == INVALID_HANDLE_VALUE) // hello 
 	{
 		std::cout << "Error, get error code: " << GetLastError() << std::endl;
 		return;
