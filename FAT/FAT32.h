@@ -48,12 +48,12 @@ public:
 	std::vector<int> getAllSectorsOfFile(std::vector<int> fileClusters);
 	void ReadData(std::string fileExtension, int firstCluster);
 	void GetFileInfo(int firstCluster);
-	std::vector<std::pair<std::vector<string>, std::vector<std::vector<std::string>>>> splitEntries(std::vector<string> sector, int numberEntries);
+	std::vector<std::pair<std::vector<string>, std::vector<std::vector<std::string>>>> splitEntries(int readPoint);
 	std::string readNameEntry(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> sub_and_main_entry);
 	void printEntry(std::vector<string>entry);
 	void printEntryInfomation(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>>);
 	void GetDirectory(int cluster);
-	void readFAT32(const uint8_t* sector, int len); 
+	void readFAT32(int readPoint, int len); 
 	std::string FileAttribute(std::vector<std::string> mainEntry);
 	bool isDeleteFile(std::vector<std::string>mainEntry);
 	void readRDECT();

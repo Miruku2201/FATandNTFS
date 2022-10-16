@@ -320,7 +320,6 @@ void FAT32::ReadData(std::string fileExtension, int firstCluster) {
 	else
 		printTab();
 		std::cout << "Can phan mem khac de doc file khac .txt\n";
-	std::cout << "\n";
 }
 
 //Lay thong tin tap tin
@@ -380,7 +379,7 @@ bool isMainEntry(std::vector<std::string> entry) {
 //									- second:	Là 1 vector dùng để chứa các entry phụ (vector<string>) 
 std::vector<
 	std::pair<
-		std::vector<string>, std::vector<std::vector<std::string>>>>FAT32::splitEntries(std::vector<string> sector, int numberEntries) {
+		std::vector<string>, std::vector<std::vector<std::string>>>>FAT32::splitEntries(int readPoint) {
 
 
 	std::vector<
@@ -388,21 +387,34 @@ std::vector<
 			std::vector<string>, std::vector<std::vector<std::string>>>> entries;		// Vector để chứa toàn bộ các bộ entry chính và phụ
 
 	std::pair<
-std::vector<string>, std::vector<std::vector<std::string>> > sub_and_main_entry; // Pair để chứa 1 entry chính và các entry phụ của nó
+		std::vector<string>, std::vector<std::vector<std::string>> > sub_and_main_entry; // Pair để chứa 1 entry chính và các entry phụ của nó
+	BYTE sector[512];
+	Miku:
+	ReadSector(driver, readPoint, sector);
+	std::vector<std::string> vector_sector = convertToVector(sector, 512);
+	readPoint += 512;
 
-for (int i(0); i < numberEntries; i++) {														// Vòng for chạy tới 16 vì chỉ có 16 entry trong 1 sector (16x32 = 512)
-	std::vector<string> entry = convertToEntry(sector, i);						// Lấy giá trị của entry thứ i / 16 entry
-	if (isSubEntry(entry)) {														// Kiểm tra xem có phải là Entry phụ không
-		sub_and_main_entry.second.push_back(entry);								// Đúng thì lưu vào trong list của các entry phụ
+	
+	for (int i(0);; i++) {														// Vòng for chạy tới 16 vì chỉ có 16 entry trong 1 sector (16x32 = 512)
+		std::vector<string> entry = convertToEntry(vector_sector, i);						// Lấy giá trị của entry thứ i / 16 entry
+		if (entry[0] == "00") {
+			break;
+		}
+		else {
+			if (isSubEntry(entry)) {														// Kiểm tra xem có phải là Entry phụ không
+				sub_and_main_entry.second.push_back(entry);								// Đúng thì lưu vào trong list của các entry phụ
+			}
+			else if (isMainEntry(entry)) {													// Nếu là Entry chính 
+				sub_and_main_entry.first = entry;											// Lưu vào giá trị của Entry chính. Vì 1 bộ chỉ có 1 entry chính
+				entries.push_back(sub_and_main_entry);									// Lưu bộ đó vào bên trong vector các bộ
+				sub_and_main_entry.second.clear();											// Xóa tất cả dữ liệu của Entry phụ để bắt đầu 1 bộ Entry chính phụ mới
+			}
+			if (i == 15) {
+				goto Miku;
+			}
+		}
 	}
-	else if (isMainEntry(entry)) {													// Nếu là Entry chính 
-		sub_and_main_entry.first = entry;											// Lưu vào giá trị của Entry chính. Vì 1 bộ chỉ có 1 entry chính
-		entries.push_back(sub_and_main_entry);									// Lưu bộ đó vào bên trong vector các bộ
-		sub_and_main_entry.second.clear();											// Xóa tất cả dữ liệu của Entry phụ để bắt đầu 1 bộ Entry chính phụ mới
-	}
-}
-
-return entries;
+	return entries;
 }
 
 // Hàm Đọc tên Entry
@@ -474,7 +486,7 @@ void FAT32::GetDirectory(int cluster) {
 
 	std::vector<
 		std::pair<
-		std::vector<string>, std::vector<std::vector<std::string>>>> entries = splitEntries(convertToVector(sector, 512), 16);
+		std::vector<string>, std::vector<std::vector<std::string>>>> entries = splitEntries(readPoint);
 	for (int j(0); j < entries.size(); j++) {
 		if (!isDeleteFile(entries[j].first)) {
 			if (hexdecimalToAscii(entries[j].first[0]) != '.') {
@@ -515,10 +527,10 @@ void FAT32::printEntry(std::vector<std::string> entry) {
 	}
 }
 
-void FAT32::readFAT32(const uint8_t* sector, int len) {
+void FAT32::readFAT32(int readPoint, int len) {
 	std::vector<
 		std::pair<
-			std::vector<string>, std::vector<std::vector<std::string>>>> entries = splitEntries(convertToVector(sector, 512), 16);
+			std::vector<string>, std::vector<std::vector<std::string>>>> entries = splitEntries(readPoint);
 	for (int j(0); j < entries.size(); j++) {
 		if (!isDeleteFile(entries[j].first)) {
 			std::string fileatr = FileAttribute(entries[j].first);
@@ -551,7 +563,6 @@ void FAT32::readRDECT() {
 	int readPoint = FAT2_pos + BPB_FATSz32 * 512;
 	while (true) {
 		ReadSector(driver, readPoint, RDECT);
-		readPoint += 512;
 		std::vector<std::string> sector = convertToVector(RDECT, 512);
 		if (sector[0] == "00") {
 			break;
@@ -559,7 +570,8 @@ void FAT32::readRDECT() {
 		std::cout << read(RDECT, 512);
 		std::cout << std::endl;
 
-		readFAT32(RDECT, 512);
+		readFAT32(readPoint, 512);
+		readPoint += 512;
 	}
 }
 

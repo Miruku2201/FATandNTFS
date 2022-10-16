@@ -2,9 +2,8 @@
 
 int main() {
 	BYTE BootSector[512];
-	BYTE FAT1[512];
-	BYTE RDECT[512];
-	
+	BYTE FAT1[512];	
+
 	string namePath;
 	cout << "Nhap ten dau dia: ";
 	cin >> namePath;
