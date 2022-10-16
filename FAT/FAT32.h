@@ -56,6 +56,7 @@ public:
 	void readFAT32(const uint8_t* sector, int len); 
 	std::string FileAttribute(std::vector<std::string> mainEntry);
 	bool isDeleteFile(std::vector<std::string>mainEntry);
+	void readRDECT();
 };
 
 void ReadSector(LPCWSTR drive, int readPoint, BYTE* sector);
