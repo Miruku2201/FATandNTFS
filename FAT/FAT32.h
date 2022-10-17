@@ -69,6 +69,7 @@ std::string decimalToHexdecimal(int dec);// Chuyển từ hệ 10 -> hệ 16
 std::string asciiToHexdecimal(char ch);// Chuyển hệ Ascii-> 16
 std::vector<string> convertToVector(const uint8_t* data, int len);
 string LittleEndian(std::vector<string> temp, std::string offset_hex, int nBytes);
+std::string BigEndian(std::vector<string> sector, std::string offset_hex, int nBytes);
 std::vector<string> convertToEntry(std::vector<std::string> sector, int n); // Convert 512 byte -> 16 entry
 bool isSubEntry(std::vector<std::string>entry);
 bool isMainEntry(std::vector<std::string>entry);

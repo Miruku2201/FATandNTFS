@@ -295,7 +295,7 @@ void FAT32::ReadData(std::string fileExtension, int firstCluster) {
 	if (strcmp(fileExtension.c_str(), "TXT") == 0) {
 		if (firstCluster != 0) {
 			printTab();
-			std::cout << "Content" << std::endl;
+			std::cout << "Content:" << std::endl;
 			vector<int> fileClusters = getAllClustersOfFile(firstCluster);
 			vector<int> fileSectors = getAllSectorsOfFile(fileClusters);
 			for (unsigned int i = 0; i < fileSectors.size(); i++) {
@@ -307,7 +307,7 @@ void FAT32::ReadData(std::string fileExtension, int firstCluster) {
 				
 				printTab();
 				for (int j = 0; j < 512; j += 1) {
-					std::cout << sectorFile[j];
+					std::cout << (int)sectorFile[j];
 					if (sectorFile[j] == '\0') {
 						std::cout << std::endl;
 						return;
