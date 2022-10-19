@@ -17,18 +17,12 @@ int main() {
 
 	int FAT1_pos = Miku.BPB_RsvdSecCnt * Miku.BPB_BytesPerSec;
 	
-	
 	ReadSector(Miku.driver, FAT1_pos, FAT1);
 	std::cout << Miku.read(FAT1, 512) << std::endl;
 
-	
 	Miku.readRDECT();
-
-	
-
 	//ReadSector(Miku.driver, Miku.findTheLogicSector(8)*Miku.BPB_BytesPerSec +512, DATA);
 	//Miku.print(DATA, 512);
-
 	return 0;
 }
 

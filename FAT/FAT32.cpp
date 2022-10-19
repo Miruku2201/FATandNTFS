@@ -195,7 +195,6 @@ std::string FAT32::read(uint8_t* sector, int len) {
 		ss << setw(2) << setfill('0') << static_cast<int>(sector[i]);
 		ss << " ";
 	}
-
 	return ss.str();
 }
 
@@ -233,9 +232,8 @@ void FAT32::print(uint8_t* sector, int len) {
 	cout << "Vi tri cua bang FAT2: " << (BPB_RsvdSecCnt + BPB_FATSz32) * BPB_BytesPerSec << " bytes" << endl;
 
 	Data_Position = BPB_RsvdSecCnt + BPB_NumFATs * BPB_FATSz32;
-	std::cout << Data_Position << std::endl;
 	
-	std::string FatName = LittleEndian(convertToVector(sector, len), "52", 8);
+	std::string FatName = BigEndian(convertToVector(sector, len), "52", 8);
 	std::cout << hexToASCII(FatName) << std::endl;
 }
 
@@ -271,8 +269,6 @@ std::vector<int> FAT32::getAllClustersOfFile(int firstCluster) {
 
 	return fileClusters;
 }
-
-
 
 // Tìm sector tương ứng với Cluster
 vector<int> FAT32::getAllSectorsOfFile(std::vector<int> fileClusters) {
@@ -346,7 +342,7 @@ void FAT32::ReadData(std::string fileExtension, int firstCluster) {
 	}
 	else
 		printTab();
-		std::cout << "Open by: "<< ReadBy(fileExtension) << "\n";
+		std::cout << "Open by: " << ReadBy(fileExtension) << "\n";
 }
 
 //Lay thong tin tap tin
@@ -475,7 +471,12 @@ std::string FAT32::readNameEntry(std::pair<std::vector<std::string>, std::vector
 
 		for (int i(0); i < name.length(); i++) {
 			if (name[i] == '.') {
-				ext << name[i + 2] << name[i + 4] << name[i + 6];
+				for (int j(2); j < name.length(); j += 2) {
+					ext << name[i + j];
+					if (i + j > name.length() || name[i+j+2] == '\0') {
+						break;
+					}
+				}
 				break;
 			}
 		}
@@ -545,10 +546,8 @@ void FAT32::GetDirectory(int cluster) {
 		if (!isDeleteFile(entries[j].first)) {
 			if (hexdecimalToAscii(entries[j].first[0]) != '.') {
 				std::string fileatr = BYTEFileAttribute(entries[j].first);
-				//if (fileatr == "10" || fileatr == "16") {
 					printTab();
 					std::cout << "Loai: " << FileAttribute(fileatr) << std::endl;
-					std::cout << fileatr << std::endl;
 					std::string ext = readNameEntry(entries[j]);
 					int mainEntry_StartCluster = hexadecimalToDecimal(LittleEndian(entries[j].first, "1A", 2));
 					if (ext == "") {
@@ -561,25 +560,13 @@ void FAT32::GetDirectory(int cluster) {
 						printTab();
 						int mainEntry_SizeFile = hexadecimalToDecimal(LittleEndian(entries[j].first, "1C", 4));
 						std::cout << "Kich thuoc cua File: " << mainEntry_SizeFile << " bytes" << std::endl;
+						std::cout << std::endl;
 					}
-				//}
-				//else if (LittleEndian(entries[j].first, "B", 1) == "20") {
-				/*else{
-					printTab();
-					std::cout << "Loai: " <<FileAttribute(fileatr) << std::endl;
-					std::string ext = readNameEntry(entries[j]);
-					int mainEntry_StartCluster = hexadecimalToDecimal(LittleEndian(entries[j].first, "1A", 2));
-					ReadData(ext, mainEntry_StartCluster);
-					printTab();
-					int mainEntry_SizeFile = hexadecimalToDecimal(LittleEndian(entries[j].first, "1C", 4));
-					std::cout << "Kich thuoc cua File: " << mainEntry_SizeFile << " bytes" << std::endl;
-				}*/
 			}
 		}
 		std::cout << std::endl;
 	}
 }
-
 
 // In kiểm tra thôi
 void FAT32::printEntry(std::vector<std::string> entry) {
@@ -591,17 +578,15 @@ void FAT32::printEntry(std::vector<std::string> entry) {
 	}
 }
 
-void FAT32::readDisk(int readPoint, int len) {
+void FAT32::readByReadPoint(int readPoint, int len) {
 	std::vector<
 		std::pair<
 			std::vector<string>, std::vector<std::vector<std::string>>>> entries = splitEntries(readPoint);
 	for (int j(0); j < entries.size(); j++) {	
 		if (!isDeleteFile(entries[j].first)) {
 			std::string fileatr = BYTEFileAttribute(entries[j].first);
-			//if (fileatr == "10" || fileatr == "16") {
 			printTab();
 			std::cout << "Loai: " << "Thu muc" << std::endl;
-			std::cout << fileatr << std::endl;
 			std::string ext = readNameEntry(entries[j]);
 			int mainEntry_StartCluster = hexadecimalToDecimal(LittleEndian(entries[j].first, "1A", 2));
 			if (ext == "") {
@@ -614,20 +599,18 @@ void FAT32::readDisk(int readPoint, int len) {
 				printTab();
 				int mainEntry_SizeFile = hexadecimalToDecimal(LittleEndian(entries[j].first, "1C", 4));
 				std::cout << "Kich thuoc cua File: " << mainEntry_SizeFile << " bytes" << std::endl;
+				std::cout << std::endl;
 			}
-			//}
-			//else if (fileatr == "20" || fileatr == "01") {
-			/*else{
-				printTab();
-				std::cout << "Loai: " << FileAttribute(fileatr) << std::endl;
-				std::string ext = readNameEntry(entries[j]);
-				int mainEntry_StartCluster = hexadecimalToDecimal(LittleEndian(entries[j].first, "1A", 2));
-				ReadData(ext, mainEntry_StartCluster);
-				printTab();
-				int mainEntry_SizeFile = hexadecimalToDecimal(LittleEndian(entries[j].first, "1C", 4));
-				std::cout << "Kich thuoc cua File: " << mainEntry_SizeFile << " bytes" << std::endl;
-			}*/
 		}
+	}
+}
+
+bool isStopRead(std::vector<std::string> sector) {
+	for (int i(0); i < 16; i++) {
+		if (sector[i] != "00") {
+			return false;
+		}
+		return true;
 	}
 }
 
@@ -638,13 +621,13 @@ void FAT32::readRDECT() {
 	while (true) {
 		ReadSector(driver, readPoint, RDECT);
 		std::vector<std::string> sector = convertToVector(RDECT, 512);
-		if (sector[0] == "00") {
+		if (isStopRead(sector)) {
 			break;
 		}
 		std::cout << read(RDECT, 512);
 		std::cout << std::endl;
 
-		readDisk(readPoint, 512);
+		readByReadPoint(readPoint, 512);
 		readPoint += 512;
 	}
 }

@@ -51,12 +51,13 @@ public:
 	std::vector<std::pair<std::vector<string>, std::vector<std::vector<std::string>>>> splitEntries(int readPoint);
 	std::string readNameEntry(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>> sub_and_main_entry);
 	void printEntry(std::vector<string>entry);
-	void printEntryInfomation(std::pair<std::vector<std::string>, std::vector<std::vector<std::string>>>);
 	void GetDirectory(int cluster);
-	void readFAT32(int readPoint, int len); 
-	std::string FileAttribute(std::vector<std::string> mainEntry);
+	void readByReadPoint(int readPoint, int len); 
+	std::string BYTEFileAttribute(std::vector<std::string> mainEntry);
 	bool isDeleteFile(std::vector<std::string>mainEntry);
 	void readRDECT();
+	std::string FileAttribute(std::string hexa);
+	
 };
 
 void ReadSector(LPCWSTR drive, int readPoint, BYTE* sector);
