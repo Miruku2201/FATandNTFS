@@ -614,7 +614,7 @@ bool isStopRead(std::vector<std::string> sector) {
 	}
 }
 
-void FAT32::readRDECT() {
+void FAT32::readRDET() {
 	BYTE RDECT[512];
 	int FAT2_pos = (BPB_RsvdSecCnt + BPB_FATSz32) * BPB_BytesPerSec;
 	int readPoint = FAT2_pos + BPB_FATSz32 * 512;

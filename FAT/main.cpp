@@ -20,7 +20,7 @@ int main() {
 	ReadSector(Miku.driver, FAT1_pos, FAT1);
 	std::cout << Miku.read(FAT1, 512) << std::endl;
 
-	Miku.readRDECT();
+	Miku.readRDET();
 	//ReadSector(Miku.driver, Miku.findTheLogicSector(8)*Miku.BPB_BytesPerSec +512, DATA);
 	//Miku.print(DATA, 512);
 	return 0;

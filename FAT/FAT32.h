@@ -55,7 +55,7 @@ public:
 	void readByReadPoint(int readPoint, int len); 
 	std::string BYTEFileAttribute(std::vector<std::string> mainEntry);
 	bool isDeleteFile(std::vector<std::string>mainEntry);
-	void readRDECT();
+	void readRDET();
 	std::string FileAttribute(std::string hexa);
 	
 };
